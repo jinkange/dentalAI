@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>치과톡AI 안내</title>
+  <style>
+    @font-face {
+      font-family: 'CustomFont';
+      src: url('fonts/Hakgyoansim Dunggeunmiso TTF B.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: 'Noto Sans KR', sans-serif;
+      background: #f0f4f8;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    .screen {
+      position: absolute;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      transition: opacity 1s;
+    }
+    .screen.active {
+      opacity: 1;
+      z-index: 1;
+    }
+    .title {
+        font-family: 'CustomFont', 'Noto Sans KR', sans-serif;
+      font-size: 4rem;
+      text-align: center;
+      color: #1a73e8;
+      margin: 1rem;
+    }
+    .select-box{
+        margin-top: 1rem;
+    font-size: 3.2rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 6px solid #1a73e8;
+    }
+    .input-box {
+        margin-top: 1rem;
+    font-size: 2rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 6px solid #1a73e8;
+    }
+    .map-placeholder {
+      margin-top: 1rem;
+      width: 300px;
+      height: 200px;
+      background: #ddd;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 12px;
+      font-size: 1rem;
+      color: #333;
+    }
+    .button {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 2.78rem;
+      cursor: pointer;
+    }
+    .button2 {
+        width: 33rem;
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 2.78rem;
+      cursor: pointer;
+    }
+    #loading-overlay {
+        font-family: 'CustomFont', 'Noto Sans KR', sans-serif;
+      font-size: 4rem;
+      text-align: center;
+      color: #1a73e8;
+
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(255, 255, 255, 0.80);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+    }
+
+  </style>
+</head>
+<body>
+  <!-- 로딩 오버레이 -->
+  <div id="loading-overlay">AI 응답 및 치과검색중<span id="loading-dots">.</span></div>
+  <div class="screen active" id="screen1">
+    <div class="title">안녕하세요.<br>치과톡AI입니다.</div>
+  </div>
+
+  <div class="screen" id="screen2">
+    <div class="title">지역과 아픈 이빨 상태를 <br> 저에게 알려주시면</div>
+  </div>
+
+  <div class="screen" id="screen3">
+    <div class="title">진료비가 저렴한 치과순으로 <br>알려드릴께요.</div>
+  </div>
+
+
+  <div class="screen" id="screen4">
+    <div class="title">사시는 지역을 선택해주세요.<br> (대구광역시)</div>
+    <div>
+        <select class="select-box" id="district-select">
+            <option disabled selected>구 선택</option>
+            <option>중구</option>
+            <option>동구</option>
+            <option>서구</option>
+            <option>남구</option>
+            <option>북구</option>
+            <option>수성구</option>
+            <option>달서구</option>
+            <option>달성군</option>
+          </select>
+          <button class="button" id="district-confirm">확인</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen5">
+    <div class="title" id="screen5-title">아프신 치아 상태를  <br>상세히 알려주세요.</div>
+    <textarea class="input-box" id="tooth-info" rows="4" cols="30" placeholder="예: 왼쪽 윗 어금니가 시리고 통증이 있습니다"></textarea>
+    <button class="button2" id="tooth-confirm">확인</button>
+  </div>
+
+  <div class="screen" id="screen6">
+    <div class="title">필요한 치과 진료 내용은 <br>다음과 같습니다</div>
+    <div>치과명: 예시치과</div>
+    <div>주소: 대구광역시 수성구 예시로 123</div>
+    <div>진료비: 스케일링 2만원, 충치치료 5만원</div>
+    <div class="map-placeholder">[지도 표시 영역]</div>
+  </div>
+
+  <script>
+        const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingDots = document.getElementById('loading-dots');
+    function showLoading() {
+      let dots = 0;
+      loadingOverlay.style.display = 'flex';
+      dotInterval = setInterval(() => {
+        dots = (dots % 3) + 1;
+        loadingDots.textContent = '.'.repeat(dots);
+      }, 500); // 점 하나씩 변경
+    }
+    function hideLoading() {
+      clearInterval(dotInterval);
+      loadingOverlay.style.display = 'none';
+    }
+
+
+
+    let dotInterval;
+
+
+    const API_KEY = "AIzaSyCefNnwOACXbP-4sf8kS3UZJAD9UkzGQsA";
+    let currentScreen = 0;
+    const screens = document.querySelectorAll('.screen');
+
+    function showScreen(index) {
+      screens.forEach((s, i) => {
+        s.classList.remove('active');
+        if (i === index) s.classList.add('active');
+      });
+    }
+
+    function nextScreen() {
+      currentScreen++;
+      if (currentScreen < screens.length) {
+        showScreen(currentScreen);
+      }
+    }
+
+async function sendToGemini(userText) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+
+  const body = {
+    system_instruction: {
+      parts: [
+        {
+          text:
+            "대답은 2가지중 하나로 해줘" +
+            "내가 아픈곳을 말하면 " +
+            "인레이 : 1100Z010 , 온레이 : 1100Z020, 광중합형 복합레진 충전 : 1100Z030, 치석제거 : 1100Z040, 자가치아 이식술 : 1100Z050" +
+            "잇몸웃음교정술 : 1100Z060, 임플란트 : 1180Z010, 크라운 : 1180Z020" +
+            +"여기서 가장 근접해 보이는 비급여 코드 1개를 가져와서 알려주면서 "+
+            "return = {비급여코드 : 1180Z020,진료명 : 크라운} 이한줄과 왜인지에 이유 : 이유 를 적어줘 , 모르겠으면 모르겠습니다. 라고알려줘",
+        },
+      ],
+    },
+    contents: [
+      {
+        parts: [
+          {
+            text: userText,
+          },
+        ],
+      },
+    ],
+  };
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+
+    // Gemini 응답 파싱
+    const botReply =
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "죄송합니다. 응답을 받을 수 없습니다.";
+    console.log(botReply)
+    return botReply
+  } catch (error) {
+    console.error("에러 발생:", error);
+  }
+}
+
+
+    // 자동 진행 1-2
+    setTimeout(nextScreen, 2000); // 1 -> 2
+    setTimeout(nextScreen, 5000); // 2 -> 3
+    setTimeout(nextScreen, 8000); // 3 -> 4
+
+    document.getElementById('district-confirm').addEventListener('click', () => {
+      const select = document.getElementById('district-select');
+      if (select.value && select.value !== '구 선택') {
+        nextScreen();
+      } else {
+        alert('구를 선택해주세요.');
+      }
+    });
+
+    async function handleToothConfirmClick() {
+    const info = document.getElementById('tooth-info').value.trim();
+    if (info.length > 0) {
+        showLoading(); // 로딩 시작
+        let result
+        try {
+      result = await sendToGemini(info);  // 완료될 때까지 기다림
+    } finally {
+        hideLoading(); // 항상 로딩 종료
+      }
+
+      const title = document.getElementById('screen5-title');
+      if (result.includes("비급여코드")) {
+        // 비급여코드 추출
+const codeMatch = result.match(/비급여코드\s*:\s*([A-Z0-9]+)/);
+const code = codeMatch ? codeMatch[1] : "";
+
+// 이유 추출
+const reasonMatch = result.match(/이유 : \s*(.+)/s); // s: 줄바꿈 포함
+const reason = reasonMatch ? reasonMatch[1].trim() : "";
+console.log("비급여코드:", code);
+console.log("이유:", reason);
+        nextScreen();              // 그 다음 실행
+    } else {
+        title.innerText = "정확한 판단이 어려워요\n 다시 입력해주세요";
+        document.getElementById('tooth-info').value = '';
+    }
+      
+    } else {
+      alert('치아 상태를 입력해주세요.');
+    }
+  }
+  function showScreen(index) {
+          // 입력값 초기화
+    if (index === 4) {
+        document.getElementById('tooth-info').value = '';
+        document.getElementById('screen5-title').innerText = '아프신 치아 상태를 상세히 알려주세요';
+      }
+      screens.forEach((s, i) => {
+        s.classList.remove('active');
+        if (i === index) s.classList.add('active');
+      });
+      currentScreen = index;
+    }
+  document.getElementById('tooth-confirm').addEventListener('click', handleToothConfirmClick);
+
+
+
+  </script>
+
+</body>
+</html>
